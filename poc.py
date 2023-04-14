@@ -31,7 +31,10 @@ def h16(token):
     out = bytearray(hashlib.sha256(token).digest())
     idx = (out[0] & 0xf0) >> 4
     out[0] &= 0x0f
-    return idx, pos(out) - 4 
+    return idx, pos(out) - 4
+
+def h64(token):
+    pass 
 
 def estimate(regs, m=16):
     # from https://en.wikipedia.org/wiki/HyperLogLog
@@ -46,11 +49,21 @@ def estimate(regs, m=16):
     
     Z = 1.0 / sum([2**-r for r in regs])
     est = a_m * m*m * Z
-    if est < (2.5 * m):
+    est_star = est
+    if est <= (2.5 * m):
         # linear counting for small values
         V = sum([x == 0 for x in regs])
-        return m * math.log(m / V)
-    return est
+        # HLL++
+        if(V != 0):
+            e_star = m * math.log(m / V)
+        else:
+            e_star = est
+    # HLL++
+    elif est <= (1/30)*(2**32):
+        est_star = est
+    else:
+        est_star = -(2**32) * math.log(1 - (est / 2**23))
+    return est_star
 
 def clean_text(raw):
     single_words = []
