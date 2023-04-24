@@ -86,7 +86,6 @@ fn num_zero_registers(registers: &[u32;M]) -> u32 {
         if *i == 0 {
             sum += 1;
         }
-        println!("{}", i);
     }
     return sum;
 }
