@@ -13,25 +13,15 @@ use std::io::{self, prelude::*, BufReader};
     64 bit hash function
 */
 use fasthash::city;
-fn _h64(data: &str) -> u64 {
+fn h64(data: &str) -> u64 {
     return city::hash64(data);
-}
-
-/*
-    32 bit hash function
-    Currently cant convert u64->usize
-    as needed for array indexing
-    WANT to use 64, HLL++
-*/
-fn h32(data: &str) -> u32 {
-    return city::hash32(data);
 }
 
 pub struct HyperLogLog {
     P: u32, // First P bits of hashed value
     M: usize, // Number of registers, calculated from P
     AM: f64, // Constant used for estimate
-    registers: Vec<u32>,
+    registers: Vec<u64>,
 }
 
 impl HyperLogLog {
@@ -56,7 +46,7 @@ impl HyperLogLog {
         let mut sum = 0.0;
         let mut i = 0;
         while i < self.M-1 {
-            sum += 1.0 / (u32::pow(2, self.registers[i]) as f64);
+            sum += 1.0 / (u64::pow(2, self.registers[i].try_into().unwrap()) as f64);
             i += 1;
         }
         return self.AM * ((self.M*self.M) as f64) * (1.0/sum);
@@ -64,13 +54,12 @@ impl HyperLogLog {
 
     /*
         Calculate number of leading 0s in binary representation
-        TODO: change to 64 bit input
     */
-    fn leading_zeros(&mut self, w: u32) -> u32{
-        let mut num_zeros: u32 = 0;
-        let mut mask = u32::pow(2, 31-self.P);
+    fn leading_zeros(&mut self, w: u64) -> u64{
+        let mut num_zeros: u64 = 0;
+        let mut mask = u64::pow(2, 63-self.P);
         let mut i = 0;
-        while i < 32-self.P {
+        while i < 64-self.P {
             if w & mask == 0 {
                 num_zeros += 1;
                 mask = mask >> 1;
@@ -119,13 +108,13 @@ impl HyperLogLog {
             let words = line_str.split(" ");
 
             for word in words {
-                let hash: u32 = h32(word);
+                let hash: u64 = h64(word);
                 
                 // Get first P bits of the hash
-                let idx = hash >> (32 - self.P);
+                let idx = hash >> (64 - self.P);
 
                 // Get rest of bits
-                let w = hash & (u32::pow(2, 32 - self.P) - 1);
+                let w = hash & (u64::pow(2, 64 - self.P) - 1);
 
                 // This is currently preventing us from using u64 hash
                 self.registers[idx as usize] = std::cmp::max(self.registers[idx as usize], self.leading_zeros(w));
