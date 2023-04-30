@@ -1,6 +1,6 @@
 /*
     HyperLogLog Implementation in Rust
-    CSCI 5454 Algorithms Final Project
+    CSCI 5454 Algorithms Final project
     April 2023
     Authors:
         Zack McKevitt
@@ -18,9 +18,9 @@ fn h64(data: &str) -> u64 {
 }
 
 pub struct HyperLogLog {
-    P: u32, // First P bits of hashed value
-    M: usize, // Number of registers, calculated from P
-    AM: f64, // Constant used for estimate
+    p: u32, // First p bits of hashed value
+    m: usize, // Number of registers, calculated from p
+    am: f64, // Constant used for estimate
     registers: Vec<u64>,
 }
 
@@ -32,9 +32,9 @@ impl HyperLogLog {
         // We could also use lookup table based on pre-calculated values
         let am_var = 0.7213 / (1.0 + (1.079/(m_var as f64)));
         HyperLogLog {
-            P: p_var,
-            M: m_var,
-            AM: am_var,
+            p: p_var,
+            m: m_var,
+            am: am_var,
             registers: vec![0; m_var],
         }
     }
@@ -45,11 +45,11 @@ impl HyperLogLog {
     fn estimate(&mut self) -> f64 {
         let mut sum = 0.0;
         let mut i = 0;
-        while i < self.M-1 {
+        while i < self.m-1 {
             sum += 1.0 / (u64::pow(2, self.registers[i].try_into().unwrap()) as f64);
             i += 1;
         }
-        return self.AM * ((self.M*self.M) as f64) * (1.0/sum);
+        return self.am * ((self.m*self.m) as f64) * (1.0/sum);
     }
 
     /*
@@ -57,9 +57,9 @@ impl HyperLogLog {
     */
     fn leading_zeros(&mut self, w: u64) -> u64{
         let mut num_zeros: u64 = 0;
-        let mut mask = u64::pow(2, 63-self.P);
+        let mut mask = u64::pow(2, 63-self.p);
         let mut i = 0;
-        while i < 64-self.P {
+        while i < 64-self.p {
             if w & mask == 0 {
                 num_zeros += 1;
                 mask = mask >> 1;
@@ -86,15 +86,15 @@ impl HyperLogLog {
     }
 
     /*
-        Linear Countring cardinality estimate
+        Linear Counting cardinality estimate
     */
     fn linear_counting(&mut self, v: u32) -> f64 {
         // Assuming log with base 2
-        return (self.M as f64) * ((v as f64)/(self.M as f64)).log(2.0); 
+        return (self.m as f64) * ((v as f64)/(self.m as f64)).log(2.0); 
     }
 
     /*
-        Aggregation Phase
+        Aggregation phase
     */
     pub fn aggregation(&mut self, fname: &str) -> io::Result<()> {
         // Data Stream
@@ -110,11 +110,11 @@ impl HyperLogLog {
             for word in words {
                 let hash: u64 = h64(word);
                 
-                // Get first P bits of the hash
-                let idx = hash >> (64 - self.P);
+                // Get first p bits of the hash
+                let idx = hash >> (64 - self.p);
 
                 // Get rest of bits
-                let w = hash & (u64::pow(2, 64 - self.P) - 1);
+                let w = hash & (u64::pow(2, 64 - self.p) - 1);
 
                 // This is currently preventing us from using u64 hash
                 self.registers[idx as usize] = std::cmp::max(self.registers[idx as usize], self.leading_zeros(w));
@@ -129,7 +129,7 @@ impl HyperLogLog {
     */
     pub fn result_computation(&mut self) -> f64 {
         let mut e = self.estimate();
-        if e < 0.4 * (self.M as f64) {
+        if e < 0.4 * (self.m as f64) {
             // Number of zero registers
             let v = self.num_zero_registers();
             if v != 0 {
