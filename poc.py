@@ -71,7 +71,7 @@ def clean_text(raw):
         words = re.split('[ -]', line)
         for word in words:
             clean_word = word.strip(string.punctuation+string.whitespace)
-            if clean_word is not '':
+            if clean_word != '':
                 single_words.append(clean_word)
     return single_words
 
@@ -81,14 +81,14 @@ def from_file(f_name):
     return clean_text(raw_content)
 
 def main():
-    tokens = from_file('war_and_peace.txt')
-    print(tokens[:100])
+    tokens = from_file('fingerprints.txt')
     for token in tokens:
         true_count.add(token)
         ridx, r = h(token.encode('utf-8'), p=bits)
         registers[ridx] = max(registers[ridx], r)
     
     actual = len(true_count)
+    print(registers)
     est = estimate(registers, m=m)
     err = abs(est-actual)/actual
     print('%d %.2f %.6f' % (actual, est, err))
