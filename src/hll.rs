@@ -19,7 +19,7 @@ fn h64(data: &str) -> u64 {
     return city::hash64(data);
 }
 
-fn h_sha(data: &str) -> u64 {
+fn _h_sha(data: &str) -> u64 {
     let full_hash = digest(data);
     let binding = hex::decode(full_hash[0..16].as_bytes()).expect("Decode failed");
     let res = BigEndian::read_u64(binding.as_slice());
@@ -57,10 +57,6 @@ impl HyperLogLog {
     */
     fn estimate(&mut self) -> f64 {
         let z: f64 = 1.0 / self.registers.iter().map(|r| 2.0_f64.powf(-(*r as i64) as f64)).sum::<f64>();
-        // while i < self.M-1 {
-        //     sum += 1.0 / (u64::pow(2, self.registers[i].try_into().unwrap()) as f64);
-        //     i += 1;
-        // }
         return self.am * ((self.m*self.m) as f64) * z
     }
 
@@ -69,7 +65,7 @@ impl HyperLogLog {
     */
     fn leading_zeros(&mut self, w: u64) -> u64{
         let mut num_zeros: u64 = 0;
-        let mut mask = u64::pow(2, 63-self.p);
+        let mut mask = u64::pow(2, 64-self.p);
         let mut i = 0;
         while i < 64-self.p {
             if w & mask == 0 {
